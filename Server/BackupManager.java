@@ -1,10 +1,8 @@
 package Server;
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -102,30 +100,14 @@ public class BackupManager {
         return databaseUtenti;
     }
 
-    /**
-     * 
-     * @fun                                 updateDatabase
-     * @brief                               Aggiorna il contenuto del file di salvataggio degli utenti
-     * @param listaUtenti                   Lista di utenti da salvare
-     * @throws FileNotFoundException
-     * @throws IllegalArgumentException
-     * 
-     */
-    public void updateDatabase(Utente utente) throws FileNotFoundException {
+    public void updateUsers(Collection<Utente> users) {
 
         /** Controllo argomenti */
-        if(utente == null) throw new IllegalArgumentException();
+        if(users == null) throw new IllegalArgumentException();
 
-        /** Se non esiste, creo file Json */
-        File fileJson = new File(this.JsonFilePath);        
-        LinkedList<Utente> list = (LinkedList<Utente>) infoRecovery();  
-        if(list != null) {
-            Iterator<Utente> i = list.iterator();
-            while (i.hasNext()) {
-                Utente u = i.next();
-                System.out.print("aaa");
-            }
-        } 
+        /** Aggiorno il contenuto del file json */
+        System.out.println("SALVATAGGIO!!!!");
+        File fileJson = new File(this.JsonFilePath);   
         if(fileJson.exists()) fileJson.delete();
         try {
             fileJson.createNewFile();
@@ -133,8 +115,14 @@ public class BackupManager {
             e.printStackTrace();
             return;
         }
-        if(list == null) list = new LinkedList<>(); 
-        list.add(utente);
+        LinkedList<Utente> list = new LinkedList<>();
+        Iterator<Utente> i = users.iterator();
+        System.out.println(users.size());
+        while (i.hasNext()) {
+            System.out.println("aaaaa");
+            Utente u = i.next();
+            list.add(u);
+        }
         ObjectMapper mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
@@ -144,7 +132,6 @@ public class BackupManager {
             e.printStackTrace();
             return;
         }
-
     }
-    
+
 }

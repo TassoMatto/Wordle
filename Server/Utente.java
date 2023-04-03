@@ -1,10 +1,13 @@
 package Server;
 import java.io.Serializable;
+import java.rmi.NoSuchObjectException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import Interfaces.ServerNotify;
 import Server.Exception.StorageUserException;
 
 /**
@@ -16,13 +19,15 @@ import Server.Exception.StorageUserException;
  * 
  */
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class Utente implements Serializable {
+//@JsonIgnoreProperties(ignoreUnknown = true)
+public class Utente implements Serializable, Comparable<Utente> {
     
     /** Variabili globali */
     private static final int MAX_ATTEMPTS = 12;
 
     /** Attributi Utente */
+    @JsonIgnore
+    private ServerNotify clientSN;  
     private String username;                                // Username dell'utente
     private String password;                                // Password utente
     private int gamePlayed;                                 // Numero di partite giocate
@@ -32,6 +37,7 @@ public class Utente implements Serializable {
     private int bestSuccessGameRow;                         // Migliore file di risultati utili consecutivi
     private LinkedList<ArrayList<String>> attemptString;    // Lista di tutti i tentativi per ogni partita giocata
     private int guessDistribution[];                        // Distribuzione dei tentativi impiegati per vincere i vari game
+    @JsonIgnore
     private boolean playConcurrentGame;    
     private static final long serialVersionUID = 1L;        // Versione serializzazione in formato json di un utente
 
@@ -69,6 +75,7 @@ public class Utente implements Serializable {
         for (int i = 0; i < MAX_ATTEMPTS; i++) {
             this.guessDistribution[i] = 0;
         }
+        this.clientSN = null;
     }
 
     /**
@@ -187,12 +194,15 @@ public class Utente implements Serializable {
 
     /**
      * 
+     * @throws RemoteException
      * @fun                             resetGamePlayed
      * @brief                           Resetta il flag che indica che l'utente stava giocando al gioco
      * 
      */
-    public void resetGamePlayed() {
-        this.playConcurrentGame = false;
+    public void resetGamePlayed() throws RemoteException {
+        if(playConcurrentGame) {
+            this.playConcurrentGame = false;
+        }
     }
 
     /**
@@ -202,12 +212,21 @@ public class Utente implements Serializable {
      * @return                          true se l'utente sta partecipando a qualche game, false altrimenti
      * 
      */
+    @JsonIgnore
     public boolean isPlaying() {
         return this.playConcurrentGame;
     }
 
     public boolean winLastGame() {
         return this.gamesWon.getLast().booleanValue();
+    }
+
+    public void setServerNotify(ServerNotify sn) {
+        this.clientSN = sn;
+    }
+
+    public void unsetServerNotify() throws NoSuchObjectException {
+        this.clientSN = null;
     }
 
     @Override
@@ -225,4 +244,18 @@ public class Utente implements Serializable {
 
         return s.toString();
     }
+
+    public int numAttempts() {
+        return this.attemptString.getLast().size();
+    }
+
+    @Override
+    public int compareTo(Utente o) {
+        return Double.compare(this.awsUtente(), o.awsUtente()); 
+    }
+
+    public ServerNotify giveServerNotify() {
+        return this.clientSN;
+    }
+
 }

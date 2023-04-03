@@ -2,11 +2,13 @@ package Server;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 
 public class ClientRequest implements Runnable {
@@ -45,15 +47,15 @@ public class ClientRequest implements Runnable {
     private void getLoginCred(DataInputStream dis) {
 
         int dim;
-        byte[] msg = {};
+        byte[] msg;
 
         try {
             dim = dis.readInt();
-            dis.read(msg, 0, dim);
-            this.usernameC = msg.toString();
+            msg = dis.readNBytes(dim);
+            this.usernameC = new String(msg, 0, dim);
             dim = dis.readInt();
-            dis.read(msg, 0, dim);
-            this.passwordC = msg.toString();
+            msg = dis.readNBytes(dim);
+            this.passwordC = new String(msg, 0, dim);
         } catch (Exception e) {
             e.printStackTrace();
             return;
@@ -63,16 +65,19 @@ public class ClientRequest implements Runnable {
 
     private String getMsg(DataInputStream dis) {
         int reqDim;
-        byte[] reqByte = {};
+        byte[] reqByte;
         try {
             reqDim = dis.readInt();  
-            dis.read(reqByte, 0, reqDim);
-        } catch (IOException e) {
+            reqByte = dis.readNBytes(reqDim);
+        } catch (EOFException eof) {
+            System.out.println("Client disconnesso");
+            return "stop";
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
         
-        return reqByte.toString();
+        return new String(reqByte, 0, reqDim);
     }
 
     private void sendMsg(DataOutputStream dos, String msg) {
@@ -96,19 +101,22 @@ public class ClientRequest implements Runnable {
             DataOutputStream dos = new DataOutputStream(client.getOutputStream());
         ) {
             getLoginCred(dis);
+            System.out.println("Credenziali acquisite . " + usernameC + " "+ passwordC);
             while (!Thread.currentThread().isInterrupted()) {
                 switch(getMsg(dis)) {
                 
                     /** Richiesta del client di giocare all'ultimo gioco */
                     case "play":
-                        this.us.playGame(usernameC, passwordC);
+                        System.out.println("Voglio joca'");
+                        System.out.println("Funziona? " + this.us.playGame(usernameC, passwordC));
                         dos.writeInt(0);                        // Ack
                     break;
                     
                     case "gw":
                         String sw = getMsg(dis);
                         String resend = this.us.sendGuessedWord(usernameC, passwordC, sw);
-                        sendMsg(dos, resend);
+                        if(resend == null) sendMsg(dos, "error");
+                        else sendMsg(dos, resend);
                     break;
     
                     case "statistics":
@@ -121,13 +129,18 @@ public class ClientRequest implements Runnable {
                     break;
                 
                     case "logout":
+                        System.out.println("Faccio il cazzo di logout");
                         this.us.logoutUser(usernameC, passwordC);
                         dos.writeInt(0);
                     break;
-    
+
                     default:
+                        return;
                 }
             }
+        } 
+        catch (SocketException se) {
+            //GESTIRE CHIUSURA IMPROVVISA CLIENT
         } catch (Exception e) {
             e.printStackTrace();
             return;

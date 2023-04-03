@@ -62,7 +62,7 @@ public class WordleServer implements Runnable {
         String save;
         String[][] paramSettings;
         try {
-            paramSettings = Bootload.readFileConfig(configFile, "ipSocialNetwork", "portSocialNetwork", "portSocialNetwork", "listenPort");
+            paramSettings = ReadConfigFile.readFileConfig(configFile, "ipSocialNetwork", "portSocialNetwork", "portSocialNetwork", "listenPort");
         } catch (Exception e) {
             e.printStackTrace();
             return;
@@ -96,6 +96,7 @@ public class WordleServer implements Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     Socket client = ss.accept();
+                    System.out.println("Nuovo client connesso");
                     pool.execute(new ClientRequest(users, client, this.SocialNetworkIP, this.SocialNetworkPORT));
                 } catch (SocketTimeoutException e) {
                     continue;
@@ -109,5 +110,4 @@ public class WordleServer implements Runnable {
 
     }
 
-    
 }

@@ -9,9 +9,9 @@ public interface AuthenticationInterface extends Remote {
 
     public long login(String username, String password) throws RemoteException;
 
-    public void registerClient(ServerNotify sn) throws RemoteException;
+    public void registerClient(ServerNotify sn, String username, String password) throws RemoteException, IllegalAccessException;
 
-    public void unregisterClient(ServerNotify sn) throws RemoteException;
+    public void unregisterClient(String username, String password) throws RemoteException, IllegalAccessException;
 
 
 }
