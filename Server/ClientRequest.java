@@ -31,10 +31,13 @@ public class ClientRequest implements Runnable {
     private void shareUserAttempts() {
 
         ArrayList<String> att = this.us.giveUserAttempt(usernameC, passwordC);
+        StringBuilder sb = new StringBuilder();
         if(att == null) return;
+        System.out.println(ipSocialNetwork + " " + portSocialNetwork);
         try (DatagramSocket ds = new DatagramSocket()) {
             InetAddress ia = InetAddress.getByName(this.ipSocialNetwork);
-            String s = att.toString();
+            sb.append(att.toString());
+            String s = sb.toString();
             DatagramPacket dp = new DatagramPacket(s.getBytes(), s.length(), ia, this.portSocialNetwork);
             ds.send(dp);
         } catch (Exception e) {
@@ -125,7 +128,9 @@ public class ClientRequest implements Runnable {
                     break;
     
                     case "share":
+                        System.out.println("condivido");
                         shareUserAttempts();
+                        dos.writeInt(0);
                     break;
                 
                     case "logout":

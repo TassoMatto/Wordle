@@ -134,15 +134,18 @@ public class Utente implements Serializable, Comparable<Utente> {
     public void gameWin() throws StorageUserException {
 
         /** Errore nella struttura dell'utente */
-        if(this.attemptString.getLast().size() == 0) throw new StorageUserException();
+        //if(this.attemptString.getLast().size() == 0) throw new StorageUserException();
         this.gamesWon.set(this.gamePlayed-1, true);
         this.nGamesWin++;
         this.successGameRow++;
         int count = 0;
-        for (String attempt : attemptString.getLast()) {
-            count++;
+        if(attemptString.getLast() != null) {
+            for (String attempt : attemptString.getLast()) {
+                count++;
+            }
         }
-        this.guessDistribution[count-1]++;
+        
+        this.guessDistribution[count]++;
 
         this.bestSuccessGameRow = (this.successGameRow > this.bestSuccessGameRow) ? this.successGameRow : this.bestSuccessGameRow;
     }
@@ -156,7 +159,7 @@ public class Utente implements Serializable, Comparable<Utente> {
      * 
      */
     public ArrayList<String> lastGameAttempts() {
-        if(!winLastGame()) return null;
+        //if(!winLastGame()) return null;
         ArrayList<String> tmp = null;
 
         if(this.attemptString.size() != 0) tmp = new ArrayList<>(this.attemptString.getLast());
@@ -177,7 +180,7 @@ public class Utente implements Serializable, Comparable<Utente> {
             score += (i+1)*this.guessDistribution[i];
         }
         score += (MAX_ATTEMPTS+1)*(this.gamePlayed-this.nGamesWin);
-        return (score / nGamesWin);
+        return (score / gamePlayed);
     }
 
     /**

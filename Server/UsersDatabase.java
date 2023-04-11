@@ -38,32 +38,17 @@ public class UsersDatabase {
     /**
      * 
      * @fun                             UserDatabase
-     * @brief                           Metodo costruttore di base
-     * @throws FileNotFoundException
-     * 
-     */
-    public UsersDatabase() throws FileNotFoundException {
-
-        /** Costruzione strutture */
-        this.database = new HashMap<>();
-        this.classifica = new LinkedList<>();
-        this.backup = new BackupManager();
-        this.online = new HashMap<>();
-        this.secretWord = "";
-        if((this.words = uploadWords("words.txt")) == null) throw new FileNotFoundException();
-
-    }
-
-    /**
-     * 
-     * @fun                             UserDatabase
      * @brief                           Metodo costruttore
      * @param backupSaving              File dal quale recupero il vecchio stato del server
      * @param pathname                  File dizionario delle parole segrete da usare
      * @throws FileNotFoundException
      * 
      */
-    public UsersDatabase(String backupSaving, String pathname) throws FileNotFoundException {
+    public UsersDatabase(String backupSaving, String dictionary, long timegame) throws FileNotFoundException {
+
+        /** Controllo argomenti */
+        if(dictionary == null) throw new NullPointerException();
+        if(backupSaving == null) throw new NullPointerException();
 
         /** Costruzione strutture */
         this.database = new HashMap<>();
@@ -71,8 +56,7 @@ public class UsersDatabase {
         this.backup = new BackupManager(backupSaving);
         this.online = new HashMap<>();
         this.secretWord = "";
-        if((this.words = uploadWords(pathname)) == null) throw new FileNotFoundException();
-        System.out.println(words.size());
+        if((this.words = uploadWords(dictionary)) == null) throw new FileNotFoundException();
     
         /** Ripristino informazioni */
         LinkedList<Utente> usersRecovery = (LinkedList<Utente>) this.backup.infoRecovery();
@@ -82,15 +66,41 @@ public class UsersDatabase {
                 this.classifica.add(utente);
             }
         }
-        this.gameTime = 15000;
+        this.gameTime = timegame;
         this.wordsUpdate = new Thread(new WordsUpdater(this, gameTime));
         this.wordsUpdate.start();
 
     }
 
+    // AGGIORNA CLASSIFICA
+    private void updatePlaces() {
+        this.classifica.sort(null);
+        LinkedList<String> l = new LinkedList<>();
+        int ind = -1;
+        int dim = (this.classifica.size() < 3) ? this.classifica.size() : 3;
+        System.out.println("DIMENSIONE CLASSIFICA: " + dim);
+        while (++ind < dim) {
+            Utente u = this.classifica.get(ind);
+            l.add(u.getUsername() + " Punti: " + u.awsUtente());
+        }
+        
+        System.out.println("Notifico aggiornamento classifica: " + dim);
+        Iterator<Utente> i = online.values().iterator();
+        while (i.hasNext()) {
+            Utente u = i.next();
+            try {
+                u.giveServerNotify().ServerAlert(l);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // CAMBIO LE PAROLE DI GIOCO
     public void changeWord() {
         synchronized(database) {
-            classifica.sort(null);
+            System.out.println("AGGIORNO LA CLASSIFICA DI GIOCO");
+            updatePlaces();
             Iterator<Utente> i = online.values().iterator();
             while (i.hasNext()) {
                 Utente u = i.next();
@@ -189,7 +199,10 @@ public class UsersDatabase {
 
         /** Disconnetto l'utente */
         synchronized(database) {
-            this.online.remove(username, password);
+            Utente u = this.online.get(username);
+            if(u == null) return;
+            if(!u.checkUserPsw(password)) return;
+            this.online.remove(username);
         }
     }
 
@@ -198,14 +211,15 @@ public class UsersDatabase {
         /** Controllo argomenti */
         if(username.equals("") || password.equals("")) throw new IllegalArgumentException();
         synchronized(database) {
-            if((online.get(username) == null) || (!online.get(username).checkUserPsw(password)) || (!online.get(username).isPlaying())) return null;
+            if((online.get(username) == null) || (!online.get(username).checkUserPsw(password))) return null;
 
             /** Recupero i suggerimenti dell'ultimo gioco dell'utente */
             Utente u;
-                if((u = this.online.get(username)) == null) return null;
-                if(!u.checkUserPsw(password)) return null;
-                if(!u.isPlaying()) return null;
-                return u.lastGameAttempts();
+            if((u = this.online.get(username)) == null) return null;
+            if(!u.checkUserPsw(password)) return null;
+            ArrayList<String> ret = u.lastGameAttempts();
+            if(u.winLastGame()) return ret;
+            return (ret.size() == 12) ? ret : null;
         }
 
         
@@ -223,9 +237,7 @@ public class UsersDatabase {
             if((u = this.online.get(username)) == null) return false;
             if(u.isPlaying()) return true;
             u.addNewGamePlayed();
-            synchronized(this.backup) {
-                this.backup.updateUsers(this.online.values());
-            }
+            this.backup.updateUsers(this.online.values());
         }
         
         return true;
@@ -244,24 +256,27 @@ public class UsersDatabase {
                 if(!words.contains(gw)) return "notFound";
                 if(gw.equals(secretWord)) {
                     s.append("++++++++++");
-                    online.get(username).addAttempt(s.toString());
                     try {
                         online.get(username).gameWin();
                     } catch (StorageUserException e) {
                         e.printStackTrace();
                         return null;
                     }
-                    return s.toString();
-                }
-                for (int i = 0; i < gw.length(); i++) {
-                    if(secretWord.charAt(i) == gw.charAt(i)) {
-                        s.append("+");
-                    } else if(secretWord.indexOf(gw.charAt(i)) == -1) {
-                        s.append("X");
-                    } else {
-                        s.append("?");
+                    
+                } else {
+                    for (int i = 0; i < gw.length(); i++) {
+                        System.out.println(i + "------" + gw + "-----" + secretWord);
+                        if(secretWord.charAt(i) == gw.charAt(i)) {
+                            s.append("+");
+                        } else if(secretWord.indexOf(gw.charAt(i)) == -1) {
+                            s.append("X");
+                        } else {
+                            s.append("?");
+                        }
+                        
                     }
                 }
+                this.classifica.sort(null);
             }
             online.get(username).addAttempt(s.toString());
 
@@ -302,8 +317,8 @@ public class UsersDatabase {
         if(username.equals("") || password.equals("")) throw new IllegalAccessException();
 
         synchronized(database) {
-            if((this.online.get(username) == null) || (!this.online.get(username).checkUserPsw(password))) throw new IllegalAccessError();
-            this.online.get(username).unsetServerNotify();
+            if((this.database.get(username) == null) || (!this.database.get(username).checkUserPsw(password))) throw new IllegalAccessError();
+            this.database.get(username).unsetServerNotify();
         }
     }
 

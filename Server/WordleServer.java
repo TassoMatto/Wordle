@@ -21,7 +21,7 @@ public class WordleServer implements Runnable {
     public static final String backupFile = "users.json";
     public static final int PORT_TCP = 9999;
     public static final int RMI_PORT = 6789;
-    public static final long timegameDefault = 10;
+    public static final long timegameDefault = 60;
     public static final String SocialNetworkIP_DEFAULT = "228.5.6.7";
     public static final int SocialNetworkPORT_DEFAULT = 7000;
 
@@ -62,23 +62,23 @@ public class WordleServer implements Runnable {
         String save;
         String[][] paramSettings;
         try {
-            paramSettings = ReadConfigFile.readFileConfig(configFile, "ipSocialNetwork", "portSocialNetwork", "portSocialNetwork", "listenPort");
+            paramSettings = ReadConfigFile.readFileConfig(configFile, "ipSocialNetwork", "portSocialNetwork", "listenPort", "timegame");
         } catch (Exception e) {
             e.printStackTrace();
             return;
         }
         try {
-            this.listeningPort = ((save = findParam(paramSettings, "port")).equals("")) ? PORT_TCP : Integer.parseInt(save);
-            this.timegame = ((save = findParam(paramSettings, "timegame")).equals("")) ? timegameDefault : Long.parseLong(save);
-            this.SocialNetworkIP = ((save = findParam(paramSettings, "socialIP")).equals("")) ? SocialNetworkIP_DEFAULT : save;
-            this.SocialNetworkPORT = ((save = findParam(paramSettings, "socialPORT")).equals("")) ? SocialNetworkPORT_DEFAULT : Integer.parseInt(save);
+            this.listeningPort = ((save = findParam(paramSettings, "listenPort")).equals("")) ? PORT_TCP : Integer.parseInt(save);
+            this.SocialNetworkIP = ((save = findParam(paramSettings, "ipSocialNetwork")).equals("")) ? SocialNetworkIP_DEFAULT : save;
+            this.SocialNetworkPORT = ((save = findParam(paramSettings, "portSocialNetwork")).equals("")) ? SocialNetworkPORT_DEFAULT : Integer.parseInt(save);
+            this.timegame = ((save = findParam(paramSettings, "timegame")).equals("")) ? timegameDefault : Integer.parseInt(save);
         } catch (Exception e) {
             e.printStackTrace();
             return;
         }
         
         /** Costruisco il Database */
-        users = new UsersDatabase(backupFile, "words.txt");
+        users = new UsersDatabase(backupFile, "words.txt", timegame);
 
     }
 

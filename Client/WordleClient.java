@@ -15,7 +15,8 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-
+import java.util.Iterator;
+import java.util.LinkedList;
 import Interfaces.AuthenticationInterface;
 import Interfaces.ServerNotify;
 import Server.ReadConfigFile;
@@ -32,16 +33,18 @@ import Server.ReadConfigFile;
 public class WordleClient implements Runnable, ServerNotify, Serializable {
 
     /** Attributi oggetto */
-    private String ipServer;
-    private int portServer;
-    private int RMI_PORT;
-    private String socialIp;
-    private int socialPORT;
+    private String serverIP;
+    private int serverPORT;
+    private int rmiPORT;
+    private String socialNetworkIP;
+    private int socialNetworkPORT;
     private String username;
     private String password;
-    private Thread thisT;
     private Boolean stopGame;
     private String lastWord;
+    private LinkedList<String> serverNotice;
+    private Thread socialNetworkListener;
+    private LinkedList<String> podium;
 
                                         /********** METODI PRIVATI **********/
 
@@ -77,11 +80,11 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         /** Recupero il riferimenti RMI del server */
         AuthenticationInterface ai;
         try {
-            Registry r = LocateRegistry.getRegistry(this.RMI_PORT);
+            Registry r = LocateRegistry.getRegistry(this.rmiPORT);
             ai = (AuthenticationInterface) r.lookup("//localhost/WordleServer");
-            System.out.print("Username: > ");
+            System.out.print("[Username] >");
             String usern = br.readLine();
-            System.out.print("Password: > ");
+            System.out.print("[Password] >");
             String passw = br.readLine();
             return ai.register(usern, passw);
         } catch (NotBoundException | IOException e) {
@@ -106,11 +109,11 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         /** Recupero il riferimenti RMI del server */
         AuthenticationInterface ai;
         try {
-            Registry r = LocateRegistry.getRegistry(RMI_PORT);
+            Registry r = LocateRegistry.getRegistry(this.rmiPORT);
             ai = (AuthenticationInterface) r.lookup("//localhost/WordleServer");
-            System.out.print("Username: > ");
+            System.out.print("[Username] >");
             String usern = br.readLine();
-            System.out.print("Password: > ");
+            System.out.print("[Password] >");
             String passw = br.readLine();
             boolean res = ai.login(usern, passw) != -1;
             if(res) {
@@ -135,10 +138,9 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         /** Comunico con RMI del server */
         AuthenticationInterface ai;
         try {
-            Registry r = LocateRegistry.getRegistry(RMI_PORT);
+            Registry r = LocateRegistry.getRegistry(this.rmiPORT);
             ai = (AuthenticationInterface) r.lookup("//localhost/WordleServer");
             ServerNotify sn = (ServerNotify) UnicastRemoteObject.exportObject((ServerNotify) this, 0);
-            this.thisT = Thread.currentThread();
             ai.registerClient(sn, this.username, this.password);
         } catch (Exception e) {
             e.printStackTrace();
@@ -157,7 +159,7 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         /** Comunico con RMI del server */
         AuthenticationInterface ai;
         try {            
-            Registry r1 = LocateRegistry.getRegistry(RMI_PORT);
+            Registry r1 = LocateRegistry.getRegistry(this.rmiPORT);
             ai = (AuthenticationInterface) r1.lookup("//localhost/WordleServer");            
             ai.unregisterClient(username, password);
         } catch (Exception e) {
@@ -233,11 +235,22 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         /** Controllo argomento */
         if(dos == null) throw new NullPointerException();
 
-        System.out.println(username + " " + password);
         sendMsg(dos, username);
         sendMsg(dos, password);
     }
-    
+
+    /**
+     * 
+     * @fun                             isEnd
+     * @brief                           Controlla se il server ha determinato la fine del gioco
+     * @return                          (true) se il gioco è terminato, (false) altrimenti
+     */
+    private boolean isEnd() {
+        synchronized(this.lastWord) {
+            return this.stopGame;
+        }
+    }
+
     /**
      *
      * @fun                             requestsToServer
@@ -257,16 +270,16 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
 
             int res;
             sendCred(dos);
+            boolean play = false;
             while (true) {
-                System.out.print("\033[H\033[2J");  
+                //System.out.print("\033[H\033[2J");  
                 System.out.flush();
                 System.out.println("1) Partecipa al gioco");
-                System.out.println("2) Invia una parola da indovinare");
+                if(play) System.out.println("2) Invia una parola da indovinare");
                 System.out.println("3) Calcolo statistiche utente");
-                System.out.println("4) Condividi il risultato di gioco con gli altri");
-                System.out.println("5) Mostra notifiche del server di gioco");
-                System.out.println("6) Mostrami prime 3 posizioni della classifica");
-                System.out.println("7) Logout dal server");
+                System.out.println("4) Mostra notifiche del server di gioco");
+                System.out.println("5) Mostrami prime 3 posizioni della classifica");
+                System.out.println("6) Logout dal server");
                 int opt = Integer.parseInt(br.readLine());
                 if(isEnd()) { resetEndGame(); continue; }
 
@@ -280,24 +293,50 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                         if(res != 0) {
                             if(isEnd()) resetEndGame();
                             else System.err.println("Errore durante la richiesta di partecipazione al gioco");
+                            
                         }
                         else System.out.println("Stai partecipando al gioco"); 
+                        play = true;
                     break;
                         
                     /** Tentativo di indovinare */
                     case 2:
-                        sendMsg(dos, "gw");
-                        System.out.print("\033[H\033[2J");  
-                        System.out.flush();
-                        System.out.print("Inserisci una parola di 10 lettere: ");
-                        String gw = br.readLine();
-                        sendMsg(dos, gw);
-                        String tips = getMsg(dis);
+                        if(play) {
+                            sendMsg(dos, "gw");
+                            //System.out.print("\033[H\033[2J");  
+                            System.out.flush();
+                            System.out.print("Inserisci una parola di 10 lettere: ");
+                            String gw = br.readLine();
+                            sendMsg(dos, gw);
+                            String tips = getMsg(dis);
 
-                        if(tips.equals("maxAtt")) {
-                            if(isEnd()) resetEndGame();
-                            else System.out.println("Numero di tentativi massimo raggiunti!");
-                        } else System.out.println(tips);
+                            if(tips.equals("error")) System.out.println("Attenzione - Parola non presente in dizionario!");
+
+                            if(tips.equals("maxAtt")) {
+                                if(isEnd()) resetEndGame();
+                                else {
+                                    System.out.println("Numero di tentativi massimo raggiunti!");
+                                    System.out.print("Desideri condividere i suggerimenti online? \n(1)Si (0)No _>");
+                                    int share = Integer.parseInt(br.readLine());
+                                    if(share == 1) {
+                                        sendMsg(dos, "share");
+                                        if(dis.readInt() == 0) System.out.println("Suggerimenti pubblicati");
+                                        else System.out.println("Impossibile pubblicare i suggerimenti");
+                                    }
+                                }
+                            } else if(tips.equals("++++++++++")) {
+                                System.out.println("Complimenti - Hai indovinato la parola segreta!");
+                                System.out.print("Desideri condividere i suggerimenti online? \n(1)Si (0)No _>");
+                                int share = Integer.parseInt(br.readLine());
+                                if(share == 1) {
+                                    sendMsg(dos, "share");
+                                    if(dis.readInt() == 0) System.out.println("Suggerimenti pubblicati");
+                                    else System.out.println("Impossibile pubblicare i suggerimenti");
+                                }
+                            } else {
+                                System.out.println(tips);
+                            }
+                        }
                     break;
 
                     case 3:
@@ -305,9 +344,30 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                         String statistics = getMsg(dis);
                         System.out.println("\n" + statistics);
                     break;
+
+                    case 4:
+                        synchronized(this.serverNotice) {
+                            Iterator<String> i = this.serverNotice.iterator();
+                            while (i.hasNext()) {
+                                String s = i.next();
+                                System.out.println(s);
+                            }
+                            this.serverNotice = null;  
+                        }
+                    break;
+
+                    case 5:
+                        synchronized(this.podium) {
+                            Iterator<String> i = this.podium.iterator();
+                            while(i.hasNext()) {
+                                String s = i.next();
+                                System.out.println(s);
+                            }
+                        }
+                    break;
     
                     /** Logout client dal server */
-                    case 7:
+                    case 6:
                         sendMsg(dos, "logout");
                         res = dis.readInt();
                         if(res != 0) System.err.println("Errore durante logout");
@@ -342,12 +402,17 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         try {
             String[][] param = ReadConfigFile.readFileConfig(configFile, "portSocialNetwork", "ipSocialNetwork", "portRMI", "serverIP", "listenPort");
             
-            this.socialIp = filterParam(param, "ipSocialNetwork");
-            this.socialPORT = Integer.parseInt(filterParam(param, "portSocialNetwork"));
-            this.RMI_PORT = Integer.parseInt(filterParam(param, "portRMI"));
-            this.ipServer = filterParam(param, "serverIP");
-            this.portServer = Integer.parseInt(filterParam(param, "listenPort"));
+            this.socialNetworkIP = filterParam(param, "ipSocialNetwork");
+            this.socialNetworkPORT = Integer.parseInt(filterParam(param, "portSocialNetwork"));
+            this.rmiPORT = Integer.parseInt(filterParam(param, "portRMI"));
+            this.serverIP = filterParam(param, "serverIP");
+            this.serverPORT = Integer.parseInt(filterParam(param, "listenPort"));
             this.stopGame = false;
+            this.serverNotice = new LinkedList<>();
+            this.podium = new LinkedList<>();
+            this.lastWord = "";
+            this.socialNetworkListener = new Thread(new SocialNetworkNotify(this, this.socialNetworkIP, this.socialNetworkPORT));
+            this.socialNetworkListener.start();
         
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -363,7 +428,7 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         
         try (
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-            Socket serverSocket = new Socket(ipServer, portServer);
+            Socket serverSocket = new Socket(this.serverIP, this.serverPORT);
             )
         {
             System.out.print("\033[H\033[2J");  
@@ -371,47 +436,54 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
             System.out.println("\t\t\t[BENVENUTO SU WORDLE]\n\n");
 
             /** Prima chiedo se l'utente vuole registrarsi, poi effettuo login */
-            System.out.println("> Ci si vuole registrare al server di gioco?");
-            System.out.println("(1) Si - (0) No");
-            System.out.print("> ");
+            System.out.println("[REGISTRAZIONE(1) - ACCESSO AL GIOCO(0)]");
+            System.out.print(">");
             Integer opt = Integer.parseInt(br.readLine());
-            switch (opt) {
-                case 1:
-                    System.out.print("\033[H\033[2J");  
-                    System.out.flush();
-                    if(registerRequest(br)) {
-                        System.out.print("\033[H\033[2J");  
+
+            /** Valuto la scelta dell'utente */
+            while(!logged) {
+                switch (opt) {
+                    case 1:
+                        //System.out.print("\033[H\033[2J");  
                         System.out.flush();
-                        System.out.println("Registrazione effettuata - Effettuare login\n\n"); 
+                        if(registerRequest(br)) {
+                            //System.out.print("\033[H\033[2J");  
+                            System.out.flush();
+                            System.out.println("Registrazione effettuata - Effettuare login\n\n"); 
+                            if((logged = loginRequest(br))) {
+                                //System.out.print("\033[H\033[2J");  
+                                System.out.flush();
+                                System.out.println("Accesso al server di gioco effettuato");
+                            }
+                        } else {
+                            //System.out.print("\033[H\033[2J");  
+                            System.out.flush();
+                            System.out.println("Username o password errati!");
+                        }
+                    break;
+    
+                    case 0:
+                        //System.out.print("\033[H\033[2J");  
+                        System.out.flush();
                         if((logged = loginRequest(br))) {
-                            System.out.print("\033[H\033[2J");  
+                            //System.out.print("\033[H\033[2J");  
                             System.out.flush();
                             System.out.println("Accesso al server di gioco effettuato");
+                        } else {
+                            //System.out.print("\033[H\033[2J");  
+                            System.out.flush();
+                            System.out.println("Username o password errati!");
                         }
-                    } else {
-                        System.out.println("Errore nella fase di registrazione");
-                    }
-                break;
-
-                case 0:
-                    System.out.print("\033[H\033[2J");  
-                    System.out.flush();
-                    if((logged = loginRequest(br))) {
-                        System.out.print("\033[H\033[2J");  
-                        System.out.flush();
-                        System.out.println("Accesso al server di gioco effettuato");
-                    } else {
-                        System.out.println("Errore nella fase di registrazione");
-                        return;
-                    }
-                break;
+                    break;
+                }
             }
+           
 
             Thread.sleep(2000);
             if(logged) {
                 registerClientAlertService();
                 requestsToServer(br, serverSocket);
-                System.out.print("\033[H\033[2J");  
+                //System.out.print("\033[H\033[2J");  
                 System.out.flush();
                 System.out.println("Grazie di giocato a Wordle: un gioco di parole 3.0\n\n");
             }
@@ -424,43 +496,50 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
     }
 
     @Override
-    public void ServerAlert() throws RemoteException {
-        
+    public void ServerAlert(LinkedList<String> update) throws RemoteException {
+        synchronized(this.podium) {
+            int dim = update.size();
+            if(this.podium.size() == 0) {
+                while(dim != 0) { this.podium.add(update.removeFirst()); dim--; }
+            } else {
+                int i = -1;
+                while(++i < dim) {
+                    if(!this.podium.get(i).equals(update.get(i))) {
+                        this.podium.remove(i);
+                        this.podium.add(i, update.remove(i));
+                    }
+                }
+            }
+        }
     }
 
     @Override
-    public synchronized void EndGame(String oldWord) throws RemoteException {
-        synchronized(this) {
+    public void EndGame(String oldWord) throws RemoteException {
+        synchronized(this.lastWord) {
             stopGame = true;
             this.lastWord = oldWord;
         }
     }
 
-    private boolean isEnd() {
-        synchronized (this) {
-            return stopGame;
-        }
-    }
-
     private void resetEndGame() {
         int i = -1;
-        synchronized(this) {
+        synchronized(this.lastWord) {
             this.stopGame = false;
         }
     
-        while(++i < 5) {
+        while(++i < 3) {
             System.out.print("\033[H\033[2J");  
             System.out.flush();
             System.out.println("\t\t\t[SESSIONE DI GIOCO TERMINATA]\n\n");
             System.out.print("La parola segreta era: ");
             System.out.println(this.lastWord);
-            System.out.print("\nPotrai tornare a giocare tra " + (5 - i) + " sec");
+            System.out.print("\nPotrai tornare a giocare tra " + (3 - i) + " sec");
             try {
-                Thread.sleep(400);
+                Thread.sleep(330);
                 System.out.print(".");
-                Thread.sleep(400);
+                Thread.sleep(330);
                 System.out.print(".");
-                Thread.sleep(400);
+                Thread.sleep(330);
                 System.out.print(".");
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -470,5 +549,9 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         
     }
 
-
+    public void addNotify(String notice) {
+        synchronized(this.serverNotice) {
+            this.serverNotice.add(notice);
+        }
+    }
 }

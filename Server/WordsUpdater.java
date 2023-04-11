@@ -13,10 +13,14 @@ public class WordsUpdater implements Runnable {
     @Override
     public void run() {
         while (!Thread.currentThread().isInterrupted()) {
+            System.out.println("Cambio parola");
             try {
-                Thread.sleep(timer);
                 this.us.changeWord();
+                System.out.println("Cambiata");
+                System.out.flush();
+                Thread.sleep(timer*1000);
             } catch (InterruptedException e) {
+                e.printStackTrace();
                 break;
             }
         }
