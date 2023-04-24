@@ -9,7 +9,9 @@
 
 package Server;
 
-import java.io.FileNotFoundException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 public class ServerMain {
     public static void main(String[] args) {
@@ -22,10 +24,12 @@ public class ServerMain {
         String backupFile = args[1];
 
         /** Avvio server */
-        try {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))){
             Thread serverT = new Thread(new WordleServer(configFile, backupFile));
             serverT.start();
-        } catch (FileNotFoundException e) {
+            br.readLine();
+            serverT.interrupt();
+        } catch (IOException e) {
             e.printStackTrace();
             return;
         }

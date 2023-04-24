@@ -5,14 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;            
+import com.fasterxml.jackson.core.JsonParser;    
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -70,10 +65,10 @@ public class BackupManager {
      * @throws FileNotFoundException
      * 
      */
-    public List<Utente> infoRecovery() throws FileNotFoundException {
+    public UsersDatabase infoRecovery() throws FileNotFoundException {
         
         /** Tento di aprire il file e valuto la sua esistenza */
-        LinkedList<Utente> databaseUtenti = new LinkedList<>();
+        UsersDatabase u = null;
         File database = new File(JsonFilePath);
         if(!database.exists()) return null;
         if((database.exists()) && (!database.isFile())) throw new FileNotFoundException();
@@ -85,25 +80,19 @@ public class BackupManager {
             JsonParser parser = factory.createParser(database);
             mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
             parser.setCodec(mapper);
-            if(parser.nextToken() != JsonToken.START_ARRAY) {
-                return null;
-            }
-            while ( parser.nextToken() == JsonToken.START_OBJECT ) {
-                Utente u = parser.readValueAs(Utente.class);
-                databaseUtenti.add(u);
-            }
+            u = parser.readValueAs(UsersDatabase.class);
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
 
-        return databaseUtenti;
+        return u;
     }
 
-    public void updateUsers(Collection<Utente> users) {
+    public void updateUsers(UsersDatabase ud) {
 
         /** Controllo argomenti */
-        if(users == null) throw new IllegalArgumentException();
+        if(ud == null) throw new IllegalArgumentException();
 
         /** Aggiorno il contenuto del file json */
         System.out.println("SALVATAGGIO!!!!");
@@ -115,19 +104,12 @@ public class BackupManager {
             e.printStackTrace();
             return;
         }
-        LinkedList<Utente> list = new LinkedList<>();
-        Iterator<Utente> i = users.iterator();
-        System.out.println(users.size());
-        while (i.hasNext()) {
-            System.out.println("aaaaa");
-            Utente u = i.next();
-            list.add(u);
-        }
+
         ObjectMapper mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         try (DataOutputStream dout = new DataOutputStream(new FileOutputStream(fileJson))) {
-            dout.writeBytes(mapper.writeValueAsString(list));
+            dout.writeBytes(mapper.writeValueAsString(ud));
         } catch (Exception e) {
             e.printStackTrace();
             return;

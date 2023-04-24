@@ -1,6 +1,5 @@
 package Server;
 import java.io.Serializable;
-import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -15,11 +14,9 @@ import Server.Exception.StorageUserException;
  * @class               Utente
  * @brief               Classe di gestione delle statistiche, raking di gioco di un utente della piattaforma
  * @author              Simone Tassotti
- * @date                06/03/2023
+ * @date                22/04/2023
  * 
  */
-
-//@JsonIgnoreProperties(ignoreUnknown = true)
 public class Utente implements Serializable, Comparable<Utente> {
     
     /** Variabili globali */
@@ -27,7 +24,7 @@ public class Utente implements Serializable, Comparable<Utente> {
 
     /** Attributi Utente */
     @JsonIgnore
-    private ServerNotify clientSN;  
+    private ServerNotify clientSN;                          // Comunicazione tramite RMI al client
     private String username;                                // Username dell'utente
     private String password;                                // Password utente
     private int gamePlayed;                                 // Numero di partite giocate
@@ -38,7 +35,9 @@ public class Utente implements Serializable, Comparable<Utente> {
     private LinkedList<ArrayList<String>> attemptString;    // Lista di tutti i tentativi per ogni partita giocata
     private int guessDistribution[];                        // Distribuzione dei tentativi impiegati per vincere i vari game
     @JsonIgnore
-    private boolean playConcurrentGame;    
+    private boolean playConcurrentGame;                     // Flag che indica se l'utente stava partecipando al gioco corrente o meno
+    @JsonIgnore
+    private String oldWord;                                 // Ultima parola secreta che l'utente stava cercando di indovinare
     private static final long serialVersionUID = 1L;        // Versione serializzazione in formato json di un utente
 
     /**
@@ -47,7 +46,13 @@ public class Utente implements Serializable, Comparable<Utente> {
      * @brief           Metodo costruttore usato per ricostruire oggetto da file Json
      * 
      */
-    public Utente() {}
+    public Utente() {
+
+        /** Imposto i valori degli attributi JsonIgnore */
+        this.playConcurrentGame = false;
+        this.oldWord = "";
+        this.clientSN = null;
+    }
 
     /**
      * 
@@ -60,8 +65,10 @@ public class Utente implements Serializable, Comparable<Utente> {
      */
     public Utente(String username, String password) {
 
+        /** Controllo argomenti */
         if((password.equals("")) || (username.equals(""))) throw new IllegalArgumentException();
 
+        /** Imposto valori iniziali utenti */
         this.username = username;
         this.password = password;
         this.gamePlayed = 0;
@@ -72,6 +79,7 @@ public class Utente implements Serializable, Comparable<Utente> {
         this.attemptString = new LinkedList<>();
         this.playConcurrentGame = false;
         this.guessDistribution = new int[12];
+        this.oldWord = "";
         for (int i = 0; i < MAX_ATTEMPTS; i++) {
             this.guessDistribution[i] = 0;
         }
@@ -93,7 +101,7 @@ public class Utente implements Serializable, Comparable<Utente> {
      *
      * @fun                 addAttempt
      * @brief               Aggiungo una stringa di suggerimenti che poi l'utente può condividere 
-     * @param suggestions   Tentativo per una parola del dizionario, corrispondenti ad un tentativo immesso nel sistema
+     * @param attempt       Tentativo per una parola del dizionario, corrispondenti ad un tentativo immesso nel sistema
      * @throws              IllegalArgumentException
      * @return              true, ho aggiunto un suggerimento, false altrimenti
      * 
@@ -134,7 +142,7 @@ public class Utente implements Serializable, Comparable<Utente> {
     public void gameWin() throws StorageUserException {
 
         /** Errore nella struttura dell'utente */
-        //if(this.attemptString.getLast().size() == 0) throw new StorageUserException();
+        if(this.attemptString.getLast().size() == 0) throw new StorageUserException();
         this.gamesWon.set(this.gamePlayed-1, true);
         this.nGamesWin++;
         this.successGameRow++;
@@ -159,7 +167,7 @@ public class Utente implements Serializable, Comparable<Utente> {
      * 
      */
     public ArrayList<String> lastGameAttempts() {
-        //if(!winLastGame()) return null;
+        if(!winLastGame()) return null;
         ArrayList<String> tmp = null;
 
         if(this.attemptString.size() != 0) tmp = new ArrayList<>(this.attemptString.getLast());
@@ -197,13 +205,14 @@ public class Utente implements Serializable, Comparable<Utente> {
 
     /**
      * 
-     * @throws RemoteException
      * @fun                             resetGamePlayed
      * @brief                           Resetta il flag che indica che l'utente stava giocando al gioco
+     * @throws RemoteException
      * 
      */
-    public void resetGamePlayed() throws RemoteException {
+    public void resetGamePlayed(String oldWord) throws RemoteException {
         if(playConcurrentGame) {
+            this.oldWord = oldWord;
             this.playConcurrentGame = false;
         }
     }
@@ -220,18 +229,57 @@ public class Utente implements Serializable, Comparable<Utente> {
         return this.playConcurrentGame;
     }
 
+    /**
+     * 
+     * @fun                 alertEndGame
+     * @brief               Controlla se all'utente ha finito di giocare
+     * @return              Ritorna la vecchia parola che era da indovinare, "" altrimenti
+     * 
+     */
+    public String alertEndGame() {
+        String ret = this.oldWord;
+        this.oldWord = "";
+        return ret;
+    }
+
+    /**
+     * 
+     * @fun                 winLastGame
+     * @brief               Controlla se l'utente ha vinto l'ultimo gioco a cui ha partecipato
+     * @return              true o false a seconda se ha vinto o meno
+     * 
+     */
     public boolean winLastGame() {
         return this.gamesWon.getLast().booleanValue();
     }
 
+    /**
+     * 
+     * @fun                 setServerNotify
+     * @brief               Imposta il servizio di notifiche ai client
+     * @param sn            Riferimento RMI del client da notificare
+     * 
+     */
     public void setServerNotify(ServerNotify sn) {
         this.clientSN = sn;
     }
 
-    public void unsetServerNotify() throws NoSuchObjectException {
+    /**
+     * 
+     * @fun         unsetServerNotify
+     * @brief       Cancella riferimento RMI del client collegato come l'utente corrente
+     * 
+     */
+    public void unsetServerNotify() {
         this.clientSN = null;
     }
 
+    /**
+     * 
+     * @fun                 toString
+     * @brief               Rende l'utente in formato String, ovvero mostra le statistiche
+     * 
+     */
     @Override
     public String toString() {
         StringBuilder s = new StringBuilder();
@@ -248,15 +296,37 @@ public class Utente implements Serializable, Comparable<Utente> {
         return s.toString();
     }
 
+    /**
+     * 
+     * @fun                     numAttempts
+     * @brief                   Restituisce il numero di tentativi effettuati nell'ultimo gioco
+     * @return                  Il numero di tentativi dell'ultimo gioco
+     * 
+     */
     public int numAttempts() {
         return this.attemptString.getLast().size();
     }
 
+    /**
+     * 
+     * @fun                 compareTo
+     * @brief               Confronto tra due utenti tramite aws
+     * @param o             Utente da confrontare con quello corrente
+     * @return              Ritorna la differenza tra this e l'oggetto passato
+     * 
+     */
     @Override
     public int compareTo(Utente o) {
         return Double.compare(this.awsUtente(), o.awsUtente()); 
     }
 
+    /**
+     * 
+     * @fun                 giveServerNotify
+     * @brief               Restituisce l'attributo sn
+     * @return              Ritorna sn
+     * 
+     */
     public ServerNotify giveServerNotify() {
         return this.clientSN;
     }
