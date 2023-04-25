@@ -133,6 +133,7 @@ public class UsersDatabase {
         ) {
 
             /** Formalizzo richiesta HTTP e la invio */
+            this.log.info(Thread.currentThread().getName() + " In attesa di ricevere la parola segreta tradotta\n");
             String m = "GET /get?q=" + secretWord + "&langpair=en|it HTTP/1.1\r\n"
             + "Host: " + hostname + "\r\n"
             + "Connection: close\r\n"
@@ -164,7 +165,7 @@ public class UsersDatabase {
                     if(translatedValue.get("translatedText") != null) return translatedValue.get("translatedText").textValue();
                 }
             }
-
+            this.log.info(Thread.currentThread().getName() + " Parola tradotta ricevuta");
             return save;
         } catch (Exception e) {
             e.printStackTrace();
@@ -266,6 +267,7 @@ public class UsersDatabase {
     public void stopDatabase() {
 
         /** Invio interrupt ai vari thread gestiti */
+        this.log.warning(Thread.currentThread().getName() + " Sto fermando il database\n");
         this.wordsUpdate.interrupt();
         try {
             this.wordsUpdate.join();
@@ -273,6 +275,8 @@ public class UsersDatabase {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        this.log.warning(Thread.currentThread().getName() + " Database fermato\n");
+
     }
 
     /**
@@ -308,7 +312,7 @@ public class UsersDatabase {
         synchronized(database) {
             updatePlaces();
             Iterator<Utente> i = online.values().iterator();
-            this.log.warning(Thread.currentThread().getName() + " Tempo di gioco scaduto\n");
+            this.log.warning(Thread.currentThread().getName() + " Pubblicazione nuova parola\n");
             while (i.hasNext()) {
                 Utente u = i.next();
                 try {       

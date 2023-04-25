@@ -14,7 +14,8 @@ public class ClientMain {
     public static void main(String[] args) {
 
         /** Avvio il thread WordleClient */
-        Thread t = new Thread(new WordleClient("config.txt"));
+        if(args.length != 1) throw new IllegalAccessError();
+        Thread t = new Thread(new WordleClient(args[0]));
         t.start();
         try {
             t.join();

@@ -3,13 +3,14 @@ package Client;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.nio.file.Path;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -17,10 +18,10 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import General.ReadConfigFile;
 import General.Utils;
 import Interfaces.AuthenticationInterface;
 import Interfaces.ServerNotify;
-import Server.ReadConfigFile;
 
 /**
  * 
@@ -368,8 +369,11 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                 e.printStackTrace();
                 return;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (NotBoundException ce) {
+            ce.printStackTrace();
+            return;
+        } catch (IOException e) {
+            System.err.println("<< Connessione al server fallita - Riprovare >>\n");
             return;
         }
     }

@@ -84,9 +84,10 @@ public class ClientRequest implements Runnable {
                 dos.writeInt(code);
                 if(code == 0) break;
             }
+            boolean logout = false;
             this.log.info(Thread.currentThread().getName() + " Utente " + this.usernameC + " entrato nel server");
 
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted() && !logout) {
                 switch(Utils.receiveMessage(dis)) {
                 
                     /** Richiesta del client di giocare all'ultimo gioco */
@@ -140,6 +141,7 @@ public class ClientRequest implements Runnable {
                         this.us.logoutUser(usernameC, passwordC);
                         dos.writeInt(0);
                         this.log.fine(Thread.currentThread().getName() + " " + this.usernameC + " Disconnesso dal server di gioco");
+                        logout = true;
                     break;
 
                     default:
