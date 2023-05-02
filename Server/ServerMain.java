@@ -6,7 +6,6 @@
  * @date                                        28/03/2023
  * 
  */
-
 package Server;
 
 import java.io.BufferedReader;
@@ -27,6 +26,8 @@ public class ServerMain {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))){
             Thread serverT = new Thread(new WordleServer(configFile, backupFile));
             serverT.start();
+
+            /** Premere un qualsiasi tasto per avviare la fase di arresto del server */
             br.readLine();
             serverT.interrupt();
         } catch (IOException e) {

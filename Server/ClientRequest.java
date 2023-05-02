@@ -2,6 +2,7 @@ package Server;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -35,12 +36,18 @@ public class ClientRequest implements Runnable {
 
         ArrayList<String> att = this.us.giveUserAttempt(usernameC, passwordC);
         StringBuilder sb = new StringBuilder();
-        if(att == null) return;
+        if(att == null) {
+            return;
+        }
+
+        sb.append(usernameC + "\n\n");
+        sb.append(this.us.giveTotalWord() + "/" + att.size() + "\n\n");
+        for (String string : att) {
+            sb.append("[" + string + "]\n");
+        }
         try (DatagramSocket ds = new DatagramSocket()) {
             InetAddress ia = InetAddress.getByName(this.ipSocialNetwork);
-            sb.append(att.toString());
-            String s = sb.toString();
-            DatagramPacket dp = new DatagramPacket(s.getBytes(), s.length(), ia, this.portSocialNetwork);
+            DatagramPacket dp = new DatagramPacket(sb.toString().getBytes(), sb.toString().getBytes().length, ia, this.portSocialNetwork);
             ds.send(dp);
         } catch (Exception e) {
             e.printStackTrace();
@@ -77,7 +84,7 @@ public class ClientRequest implements Runnable {
         ) {
 
             /** Utente richiede accesso al database di gioco */
-            this.log.info(Thread.currentThread().getName() + " " + "In attesa delle credenziali di accesso al server");
+            this.log.info(Thread.currentThread().getName() + " " + "In attesa delle credenziali di accesso al server\n");
             while(true) {
                 getLoginCred(dis);
                 int code = this.us.loginUser(usernameC, passwordC);
@@ -85,73 +92,73 @@ public class ClientRequest implements Runnable {
                 if(code == 0) break;
             }
             boolean logout = false;
-            this.log.info(Thread.currentThread().getName() + " Utente " + this.usernameC + " entrato nel server");
+            this.log.info(Thread.currentThread().getName() + " Utente " + this.usernameC + " entrato nel server\n");
 
             while (!Thread.currentThread().isInterrupted() && !logout) {
                 switch(Utils.receiveMessage(dis)) {
                 
                     /** Richiesta del client di giocare all'ultimo gioco */
                     case "play":
-                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " - Richiesta di partecipare al gioco");
+                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " - Richiesta di partecipare al gioco\n");
                         int res = this.us.playGame(usernameC, passwordC);
                         dos.writeInt(res);                        
                         switch (res) {
                             case 0:
-                                this.log.fine(Thread.currentThread().getName() + " Utente " + this.usernameC + " Ora sta partecipando al gioco ");  
+                                this.log.fine(Thread.currentThread().getName() + " Utente " + this.usernameC + " Ora sta partecipando al gioco\n");  
                             break;
                         
                             case 1:
-                                this.log.info(Thread.currentThread().getName() + " Utente " + this.usernameC + " già partecipe del gioco");
+                                this.log.info(Thread.currentThread().getName() + " Utente " + this.usernameC + " già partecipe del gioco\n");
                             break;
 
                             default:
-                                this.log.warning(Thread.currentThread().getName() + " Utente " + this.usernameC + " Errore - Non può partecipare al gioco ");  
+                                this.log.warning(Thread.currentThread().getName() + " Utente " + this.usernameC + " Errore - Non può partecipare al gioco\n");  
                             break;
                         }
                     break;
                     
                     case "gw":
-                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " - Vuole indovinare la parola segreta");
+                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " - Vuole indovinare la parola segreta\n");
                         String sw = Utils.receiveMessage(dis);
                         String resend = this.us.sendGuessedWord(usernameC, passwordC, sw);
                         if(resend == null) {
                             Utils.sendMessage(dos, "error");
-                            this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " - Errore durante confronto parola");
+                            this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " - Errore durante confronto parola\n");
                         }
                         else {
                             Utils.sendMessage(dos, resend);
-                            this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " Risposta inviata al client");
+                            this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " Risposta inviata al client --> " + resend + "\n");
                         }
                     break;
     
                     case "statistics":
-                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " Richiesta di elaborazione delle proprie statistiche");
+                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " Richiesta di elaborazione delle proprie statistiche\n");
                         String statistics = this.us.userStatistics(usernameC, passwordC);
                         Utils.sendMessage(dos, statistics);
                     break;
     
                     case "share":
-                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " Richiesta di condividere i risultati di gioco");
+                        this.log.info(Thread.currentThread().getName() + " " + this.usernameC + " Richiesta di condividere i risultati di gioco\n");
                         shareUserAttempts();
                         dos.writeInt(0);
                     break;
                 
                     case "logout":
-                        this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " Disconnessione dal server");
+                        this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " Disconnessione dal server\n");
                         this.us.logoutUser(usernameC, passwordC);
                         dos.writeInt(0);
-                        this.log.fine(Thread.currentThread().getName() + " " + this.usernameC + " Disconnesso dal server di gioco");
+                        this.log.fine(Thread.currentThread().getName() + " " + this.usernameC + " Disconnesso dal server di gioco\n");
                         logout = true;
                     break;
 
                     default:
-                        this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " Richiesta non disponibile - Errore");
+                        this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " Richiesta non disponibile - Errore\n");
                         return;
                 }
             }
         } 
-        catch (SocketException se) {
-            this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " Perdita di connessione con il client - Fase di logout automatico");
+        catch (SocketException | EOFException e) {
+            this.log.warning(Thread.currentThread().getName() + " " + this.usernameC + " Perdita di connessione con il client - Fase di logout automatico\n");
             this.us.logoutUser(usernameC, passwordC);
         } catch (Exception e) {
             e.printStackTrace();

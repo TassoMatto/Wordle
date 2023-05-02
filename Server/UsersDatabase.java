@@ -242,6 +242,7 @@ public class UsersDatabase {
             List<Utente> list = List.copyOf(ud.exportUsers());
             for (Utente utente : list) {
                 this.database.put(utente.getUsername(), utente);
+                this.classifica.add(utente);
             }
             this.totalWords = ud.giveTotalWord();
             System.out.println("LE PAROLE: "+this.totalWords);
@@ -331,6 +332,18 @@ public class UsersDatabase {
         }
     }
 
+    /**
+     * 
+     * @fun                             registerUser
+     * @brief                           Registro un utente sul database
+     * @param username                  Nome utente del giocatore
+     * @param password                  Passoword utente
+     * @throws IllegalArgumentException
+     * @return                          (0) in caso di successo
+     *                                  (1) Utente già registrato
+     *                                  (-1) Errore
+     * 
+     */
     public int registerUser(String username, String password) {
 
         /** Controllo argomenti */
@@ -355,6 +368,20 @@ public class UsersDatabase {
         return 0;
     }
 
+    /**
+     * 
+     * @fun                                 loginUser
+     * @brief                               Accesso di un utente nel server di gioco
+     * @param username                      Username del giocatore
+     * @param password                      Password utente
+     * @throws IllegalArgumentException 
+     * @return                              (0) In caso di successo
+     *                                      (1) Utente non registrato
+     *                                      (2) Password errata
+     *                                      (3) Utente già loggato
+     *                                      (-1) Errore
+     * 
+     */
     public int loginUser(String username, String password) {
 
         /** Controllo argomenti */
@@ -373,6 +400,15 @@ public class UsersDatabase {
         }
     }
 
+    /**
+     * 
+     * @fun                                 logoutUser
+     * @brief                               Disconnessione dell'utente dal server
+     * @param username                      Username utente
+     * @param password                      Password utente
+     * @throws IllegalArgumentException
+     * 
+     */
     public void logoutUser(String username, String password) {
 
         /** Controllo argomenti */
@@ -387,6 +423,16 @@ public class UsersDatabase {
         }
     }
 
+    /**
+     * 
+     * @fun                                 giveUserAttempt
+     * @brief                               Restituisce i suggerimenti di gioco dell'ultima parola che l'utente ha provato a indovinare
+     * @param username                      Username utente
+     * @param password                      Password utente
+     * @throws IllegalArgumentException
+     * @return                              Lista di suggerimenti dell'ultimo gioco a cui a partecipato, null altrimenti
+     * 
+     */
     public ArrayList<String> giveUserAttempt(String username, String password) {
         
         /** Controllo argomenti */
@@ -407,6 +453,18 @@ public class UsersDatabase {
 
     }
 
+    /**
+     * 
+     * @fun                                 playGame
+     * @brief                               Richiesta di partecipare all'ultimo gioco
+     * @param username                      Username utente
+     * @param password                      Password utente
+     * @throws IllegalArgumentException     
+     * @return                              (0) In caso di successo
+     *                                      (1) Utente non è online
+     *                                      (2) Utente ha vinto il gioco corrente
+     * 
+     */
     public int playGame(String username, String password) {
 
         /** Controllo argomenti */
@@ -414,6 +472,7 @@ public class UsersDatabase {
 
         /** L'utente partecipa al gioco */
         synchronized(database) {
+            updatePlaces();
             Utente u;
             if((u = this.online.get(username)) == null) return 1;
             if(u.isPlaying() && u.winLastGame()) return 2;
@@ -431,12 +490,14 @@ public class UsersDatabase {
         if(username.equals("") || password.equals("")) throw new IllegalArgumentException();
         StringBuilder s = new StringBuilder();
         synchronized(database) {
+            updatePlaces();
             if((online.get(username) == null) || (!online.get(username).checkUserPsw(password))) return null;
             if(!(online.get(username).alertEndGame()).equals("")) return "timeout_" + translated;
             if(!online.get(username).isPlaying()) return "notAllow";
             if(online.get(username).winLastGame()) return "justWin";
             if(online.get(username).numAttempts() == 12) return "maxAtt";
 
+            String save = secretWord;
             if(!words.contains(gw)) return "notFound";
             if(gw.equals(secretWord)) {
                 s.append("++++++++++");
@@ -453,11 +514,19 @@ public class UsersDatabase {
             } else {
                 for (int i = 0; i < gw.length(); i++) {
                     System.out.println(i + "------" + gw + "-----" + secretWord);
-                    if(secretWord.charAt(i) == gw.charAt(i)) {
+                    System.out.println("--->>>>>> " + save);
+                    if(save.charAt(i) == gw.charAt(i)) {
+                        char[] edit = save.toCharArray();
+                        edit[i] = '-';
+                        save = new String(edit);
                         s.append("+");
-                    } else if(secretWord.indexOf(gw.charAt(i)) == -1) {
+                    } else if(save.indexOf(gw.charAt(i)) == -1) {
                         s.append("X");
                     } else {
+                        char[] edit = save.toCharArray();
+                        int ind = save.indexOf(gw.charAt(i));
+                        edit[ind] = '-';
+                        save = new String(edit);
                         s.append("?");
                     }
                     

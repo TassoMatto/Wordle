@@ -42,7 +42,7 @@ public class Authentication implements AuthenticationInterface {
      * @throws RemoteException
      */
     @Override
-    public int register(String username, String password) throws RemoteException {
+    public int registerClient(String username, String password) throws RemoteException {
 
         /** Controllo argomenti */
         if(username.equals("") || password.equals("")) throw new IllegalArgumentException();
@@ -61,7 +61,7 @@ public class Authentication implements AuthenticationInterface {
      * @throws IllegalAccessException
      */
     @Override
-    public void registerClient(ServerNotify sn, String username, String password) throws RemoteException, IllegalAccessException {
+    public void notifyServerRegister(ServerNotify sn, String username, String password) throws RemoteException, IllegalAccessException {
         
         /** Controllo argomenti */
         if((sn == null) || (username.equals("")) || (password.equals(""))) throw new IllegalArgumentException();

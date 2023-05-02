@@ -29,6 +29,8 @@ import Interfaces.AuthenticationInterface;
  * 
  * @fun                 WordleServer
  * @brief               Classe che gestisce le richieste provenienti dai client
+ * @author              Simone Tassotti
+ * @date                02/05/2023
  * 
  */
 public class WordleServer implements Runnable {
@@ -52,6 +54,8 @@ public class WordleServer implements Runnable {
     private Logger log;
     private Registry reg;
 
+    /*********** METODI PRIVATI **********/
+
     /**
      * 
      * @class                   runRMI
@@ -74,6 +78,13 @@ public class WordleServer implements Runnable {
         }
     }
 
+    /**
+     * 
+     * @fun                 stopRMI
+     * @brief               Ferma l'esportazione dell'oggetto del Server
+     * @throws              RemoteException
+     * 
+     */
     private void stopRMI() {
 
         /** Preparo l'interfaccia per le richieste dei client */
@@ -87,6 +98,8 @@ public class WordleServer implements Runnable {
             e.printStackTrace();
         }
     }
+
+    /*************************************/
 
     /**
      * 
@@ -180,6 +193,7 @@ public class WordleServer implements Runnable {
             e.printStackTrace();
             return;
         } finally {
+            /** In fase di arresto del pool spengo i thread e chiudo in modo forzato ogni socket pendente */
             pool.shutdown();                        
             try {
                 Iterator<Socket> i = clients.iterator();

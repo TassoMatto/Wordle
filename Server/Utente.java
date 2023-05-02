@@ -142,7 +142,6 @@ public class Utente implements Serializable, Comparable<Utente> {
     public void gameWin() throws StorageUserException {
 
         /** Errore nella struttura dell'utente */
-        if(this.attemptString.getLast().size() == 0) throw new StorageUserException();
         this.gamesWon.set(this.gamePlayed-1, true);
         this.nGamesWin++;
         this.successGameRow++;

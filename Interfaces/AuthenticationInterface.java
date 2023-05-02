@@ -24,11 +24,11 @@ public interface AuthenticationInterface extends Remote {
      *                                      (-1) Altrimenti
      * @throws RemoteException
      */
-    public int register(String username, String password) throws RemoteException;
+    public int registerClient(String username, String password) throws RemoteException;
 
     /**
      * 
-     * @fun                                 registerClient
+     * @fun                                 notifyServerRegister
      * @brief                               Registrazione del client al servizio di notifiche del server
      * @param sn                            Riferimento RMI del client
      * @param username                      Username dell'utente
@@ -36,6 +36,6 @@ public interface AuthenticationInterface extends Remote {
      * @throws RemoteException              
      * @throws IllegalAccessException
      */
-    public void registerClient(ServerNotify sn, String username, String password) throws RemoteException, IllegalAccessException;
+    public void notifyServerRegister(ServerNotify sn, String username, String password) throws RemoteException, IllegalAccessException;
 
 }

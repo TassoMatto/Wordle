@@ -2,10 +2,12 @@ package Client;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
+import java.util.Enumeration;
 
 /**
  * 
@@ -39,6 +41,29 @@ public class SocialNetworkNotify implements Runnable {
 
     /**
      * 
+     * 
+     * 
+     */
+    public static NetworkInterface setInterface (MulticastSocket multicastSocket) throws IOException {
+
+        /** Cerco un'interfaccia disponibile  */
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        while (interfaces.hasMoreElements()) {
+            NetworkInterface i = (NetworkInterface) interfaces.nextElement();
+            Enumeration<InetAddress> addresses = i.getInetAddresses();
+            while (addresses.hasMoreElements()) {
+                InetAddress address = (InetAddress) addresses.nextElement();
+                if (address instanceof Inet4Address) {
+                    multicastSocket.setNetworkInterface(i);
+                    return i;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 
      * @fun                             run
      * @brief                           Si occupa di ricevere e gestire le condivisioni sul social network
      * 
@@ -53,15 +78,16 @@ public class SocialNetworkNotify implements Runnable {
         byte[] buf = new byte[1024];
         try {
             isa = new InetSocketAddress(InetAddress.getByName(ip), port);
-            ni = NetworkInterface.getByName("lo");
             ms = new MulticastSocket(port);
-            ms.setNetworkInterface(ni);
+            ni = setInterface(ms);
             ms.joinGroup(isa, ni);
 
             /** Resto in attesa di nuovi messaggi dal server */
             while (!Thread.currentThread().isInterrupted()) {
                 DatagramPacket dp = new DatagramPacket(buf, buf.length);
-                ms.receive(dp);
+                ms.receive(dp);                
+                System.out.println("RICEVUTO");
+                System.out.flush();
                 String msg = new String(dp.getData(), 0, dp.getLength());
                 this.wc.addNotify(msg);
             }    

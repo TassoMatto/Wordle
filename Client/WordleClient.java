@@ -7,7 +7,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
-import java.net.ConnectException;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.rmi.NotBoundException;
@@ -65,7 +64,7 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
             Registry r = LocateRegistry.getRegistry(this.rmiPORT);
             ai = (AuthenticationInterface) r.lookup("//localhost/WordleServer");
             ServerNotify sn = (ServerNotify) UnicastRemoteObject.exportObject((ServerNotify) this, 0);
-            ai.registerClient(sn, this.username, this.password);
+            ai.notifyServerRegister(sn, this.username, this.password);
         } catch (Exception e) {
             e.printStackTrace();
             return;
@@ -216,6 +215,11 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                                     System.out.println("<< Hai già partecipato al gioco -- Attendi la fine per partecipare ad un altro >>");
                                 break;
 
+                                /** L'utente inserisce una parola non presente nel dizionario di gioco */
+                                case "notFound":
+                                    System.out.println("<< La parola non è presente nel gioco>>");
+                                break;
+
                                 /** Caso dove l'utente ha vinto il gioco oppure è scaduto il tempo */
                                 default:
                                     if(!tips.contains("+") && !tips.contains("?") && !tips.contains("X")) {
@@ -259,10 +263,14 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                     /** Stampo la classifica dei primi 3 del gioco */
                     case 4:
                         synchronized(this.podium) {
-                            Iterator<String> i = this.podium.iterator();
-                            while(i.hasNext()) {
-                                String s = i.next();
-                                System.out.println(s);
+                            if(this.podium.size() == 0) {
+                                System.out.println("<< Nessun aggiornamento in classifica -- Attendere >>");
+                            } else {
+                                Iterator<String> i = this.podium.iterator();
+                                while(i.hasNext()) {
+                                    String s = i.next();
+                                    System.out.println(s);
+                                }
                             }
                         }
                     break;
@@ -279,7 +287,9 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
             }
         } catch (IOException ioe) {
             System.out.println("<< Interruzione improvvisa connessione con il server >>\n");
-        } catch (Exception e) {
+        } catch(NumberFormatException nfe) {
+            System.err.println("<< Si è verificato un errore durante l'inserimento della scelta - Disconnesso dal server >>\n");
+        }catch (Exception e) {
             e.printStackTrace();
             return;
         } 
@@ -355,7 +365,7 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                 String username = inputKB.readLine();
                 System.out.print("< Password > ->> ");
                 String password = inputKB.readLine();
-                int code = ai.register(username, password);
+                int code = ai.registerClient(username, password);
                 if(code == 0) { System.out.println("\n\n<< Registrazione dell'utente effettuata >>\n\n"); break; }
                 else if(code == 1) System.out.println("\n\n<< Registrazione fallita - Utente già presente nel database di gioco >>\n\n");
                 else System.out.println("\n\n<< Registrazione fallita - Errore generico >>\n\n");
@@ -393,18 +403,20 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         if(update == null) throw new NullPointerException();
 
         /** Aggiorno la classifica locale dell'utente */
+        if(update.size() == 0) return;
+        System.out.println("Dimensioneeeee: " + update.size());
+        System.out.println("Dimensioneeeee: " + update.size());
+
         synchronized(this.podium) {
-            int dim = update.size();
-            if(this.podium.size() == 0) {
-                while(dim != 0) { this.podium.add(update.removeFirst()); dim--; }
-            } else {
-                int i = -1;
-                while(++i < dim) {
-                    if(!this.podium.get(i).equals(update.get(i))) {
-                        this.podium.remove(i);
-                        this.podium.add(i, update.remove(i));
-                    }
-                }
+            for (String string : update) {
+               System.err.println(string);
+            }
+            for (String string : podium) {
+                System.err.println(string);
+            }
+            this.podium = new LinkedList<>();
+            while (!update.isEmpty()) {
+                this.podium.add(update.poll());
             }
         }
     }
@@ -422,6 +434,7 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
 
         /** Aggiungo la notifiche del social network */
         synchronized(this.serverNotice) {
+            System.out.println("SPERO FUNZIONI");
             this.serverNotice.add(notice);
         }
     }
