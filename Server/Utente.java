@@ -166,11 +166,8 @@ public class Utente implements Serializable, Comparable<Utente> {
      * 
      */
     public ArrayList<String> lastGameAttempts() {
-        if(!winLastGame()) return null;
         ArrayList<String> tmp = null;
-
         if(this.attemptString.size() != 0) tmp = new ArrayList<>(this.attemptString.getLast());
-
         return tmp;
     }
 

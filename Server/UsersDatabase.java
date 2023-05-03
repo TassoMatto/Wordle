@@ -138,6 +138,7 @@ public class UsersDatabase {
             + "Host: " + hostname + "\r\n"
             + "Connection: close\r\n"
             + "\r\n";
+            this.log.warning(Thread.currentThread().getName() + " Richiesta https inviata: " + m + "\n");
             output.write(m);
             output.flush();
 
