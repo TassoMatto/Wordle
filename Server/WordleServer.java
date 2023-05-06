@@ -118,21 +118,12 @@ public class WordleServer implements Runnable {
         /** Settaggio parametri server */
         String save;
         String[][] paramSettings;
-        try {
-            paramSettings = ReadConfigFile.readFileConfig(configFile, "ipSocialNetwork", "portSocialNetwork", "listenPort", "timegame");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-        try {
-            this.listeningPort = ((save = Utils.filterParam(paramSettings, "listenPort")).equals("")) ? PORT_TCP : Integer.parseInt(save);
-            this.SocialNetworkIP = ((save = Utils.filterParam(paramSettings, "ipSocialNetwork")).equals("")) ? SocialNetworkIP_DEFAULT : save;
-            this.SocialNetworkPORT = ((save = Utils.filterParam(paramSettings, "portSocialNetwork")).equals("")) ? SocialNetworkPORT_DEFAULT : Integer.parseInt(save);
-            this.timegame = ((save = Utils.filterParam(paramSettings, "timegame")).equals("")) ? timegameDefault : Integer.parseInt(save);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
+        paramSettings = ReadConfigFile.readFileConfig(configFile, "ipSocialNetwork", "portSocialNetwork", "listenPort", "timegame");
+
+        this.listeningPort = ((save = Utils.filterParam(paramSettings, "listenPort")).equals("")) ? PORT_TCP : Integer.parseInt(save);
+        this.SocialNetworkIP = ((save = Utils.filterParam(paramSettings, "ipSocialNetwork")).equals("")) ? SocialNetworkIP_DEFAULT : save;
+        this.SocialNetworkPORT = ((save = Utils.filterParam(paramSettings, "portSocialNetwork")).equals("")) ? SocialNetworkPORT_DEFAULT : Integer.parseInt(save);
+        this.timegame = ((save = Utils.filterParam(paramSettings, "timegame")).equals("")) ? timegameDefault : Integer.parseInt(save);
         
         /** Avvio logfile */
         log = Logger.getLogger("WordleGameServer");

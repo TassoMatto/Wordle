@@ -9,6 +9,7 @@
 package Server;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -30,6 +31,8 @@ public class ServerMain {
             /** Premere un qualsiasi tasto per avviare la fase di arresto del server */
             br.readLine();
             serverT.interrupt();
+        } catch (FileNotFoundException fnfe) {
+            System.err.println("<< FILE DI CONFIG NON TROVATO O IMPOSSIBILE APRIRLO >>\n"); 
         } catch (IOException e) {
             e.printStackTrace();
             return;

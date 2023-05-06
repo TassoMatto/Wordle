@@ -81,12 +81,6 @@ public class UsersDatabase {
         this.log.warning(Thread.currentThread().getName() + " Aggiornamento classifica\n");
         this.classifica.sort(null);
         LinkedList<String> l = new LinkedList<>();
-        int ind = -1;
-        int dim = (this.classifica.size() < 3) ? this.classifica.size() : 3;
-        while (++ind < dim) {
-            Utente u = this.classifica.get(ind);
-            l.add(u.getUsername() + " Punti: " + u.awsUtente());
-        }
         
         /** Avverto gli utenti di un cambiamento in classifica */
         this.log.info(Thread.currentThread().getName() + " Notifico aggiornamento classifica agli utenti\n");
@@ -312,7 +306,7 @@ public class UsersDatabase {
      */
     public void changeWord() {
         synchronized(database) {
-            updatePlaces();
+            
             Iterator<Utente> i = online.values().iterator();
             this.log.warning(Thread.currentThread().getName() + " Pubblicazione nuova parola\n");
             while (i.hasNext()) {
@@ -330,6 +324,7 @@ public class UsersDatabase {
             translated = httpRequest();
             this.totalWords++;
             this.log.warning(Thread.currentThread().getName() + "Parola aggiornata (Originale: " + secretWord + " - Tradotta: " + translated + ")\n");
+            updatePlaces();
         }
     }
 
@@ -445,9 +440,7 @@ public class UsersDatabase {
             Utente u;
             if((u = this.online.get(username)) == null) return null;
             if(!u.checkUserPsw(password)) return null;
-            ArrayList<String> ret = u.lastGameAttempts();
-            if(u.winLastGame()) return ret;
-            return (ret.size() == 12) ? ret : null;
+            return u.lastGameAttempts();
         }
 
         
@@ -473,7 +466,6 @@ public class UsersDatabase {
 
         /** L'utente partecipa al gioco */
         synchronized(database) {
-            updatePlaces();
             Utente u;
             if((u = this.online.get(username)) == null) return 1;
             if(u.isPlaying() && u.winLastGame()) return 2;
@@ -481,6 +473,7 @@ public class UsersDatabase {
             
             u.addNewGamePlayed();
             this.backup.updateUsers(this);
+            updatePlaces();
         }
         
         return 0;
@@ -491,7 +484,7 @@ public class UsersDatabase {
         if(username.equals("") || password.equals("")) throw new IllegalArgumentException();
         StringBuilder s = new StringBuilder();
         synchronized(database) {
-            updatePlaces();
+            
             if((online.get(username) == null) || (!online.get(username).checkUserPsw(password))) return null;
             if(!(online.get(username).alertEndGame()).equals("")) return "timeout_" + translated;
             if(!online.get(username).isPlaying()) return "notAllow";
@@ -510,6 +503,7 @@ public class UsersDatabase {
                 }
                 online.get(username).addAttempt(s.toString());
                 this.backup.updateUsers(this);
+                updatePlaces();
                 return "win_" + translated;
                 
             } else {
@@ -530,14 +524,13 @@ public class UsersDatabase {
                         save = new String(edit);
                         s.append("?");
                     }
-                    
                 }
+                
             }
-            this.classifica.sort(null);
             
             online.get(username).addAttempt(s.toString());
-
             this.backup.updateUsers(this);
+            updatePlaces();
         }
         
         return s.toString();

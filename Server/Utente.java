@@ -246,7 +246,7 @@ public class Utente implements Serializable, Comparable<Utente> {
      * 
      */
     public boolean winLastGame() {
-        return this.gamesWon.getLast().booleanValue();
+        return (this.gamesWon == null) ? this.gamesWon.getLast().booleanValue() : false;
     }
 
     /**

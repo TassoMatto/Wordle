@@ -80,6 +80,8 @@ public class SocialNetworkNotify implements Runnable {
             isa = new InetSocketAddress(InetAddress.getByName(ip), port);
             ms = new MulticastSocket(port);
             ni = setInterface(ms);
+            if(ni == null) System.err.println("Aia");
+            else System.out.println("AAAAAAAAAAAAAAAAAAAAAAAA");
             ms.joinGroup(isa, ni);
 
             /** Resto in attesa di nuovi messaggi dal server */

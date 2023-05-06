@@ -37,6 +37,7 @@ public class ClientRequest implements Runnable {
         ArrayList<String> att = this.us.giveUserAttempt(usernameC, passwordC);
         StringBuilder sb = new StringBuilder();
         if(att == null) {
+            System.out.println("MALEEEEEEE");
             return;
         }
 
@@ -47,6 +48,7 @@ public class ClientRequest implements Runnable {
         }
         try (DatagramSocket ds = new DatagramSocket()) {
             InetAddress ia = InetAddress.getByName(this.ipSocialNetwork);
+            System.out.println("MANDOOOOOOOOOOOOO");
             DatagramPacket dp = new DatagramPacket(sb.toString().getBytes(), sb.toString().getBytes().length, ia, this.portSocialNetwork);
             ds.send(dp);
         } catch (Exception e) {
