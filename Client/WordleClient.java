@@ -403,7 +403,10 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
         if(update == null) throw new NullPointerException();
 
         /** Aggiorno la classifica locale dell'utente */
-        if(update.size() == 0) return;
+        if(update.size() == 0) {
+            System.out.println("Malissimo");
+            return;
+        }
         System.out.println("Dimensioneeeee: " + update.size());
         System.out.println("Dimensioneeeee: " + update.size());
 

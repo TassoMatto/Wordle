@@ -81,11 +81,19 @@ public class UsersDatabase {
         this.log.warning(Thread.currentThread().getName() + " Aggiornamento classifica\n");
         this.classifica.sort(null);
         LinkedList<String> l = new LinkedList<>();
-        
+        Iterator<Utente> i = this.classifica.iterator();
+        int count = 0;
+        while (i.hasNext() && count < 3) {
+            Utente u = i.next();
+            l.add((count+1) + ") Utente " + u.getUsername() + " - Punteggio: " + u.awsUtente());
+            count++;
+        }
+               
         /** Avverto gli utenti di un cambiamento in classifica */
         this.log.info(Thread.currentThread().getName() + " Notifico aggiornamento classifica agli utenti\n");
-        Iterator<Utente> i = online.values().iterator();
+        i = online.values().iterator();
         while (i.hasNext()) {
+            System.out.println("AAAAAAAAAAAAAAAAAAAAAAAAAa");
             Utente u = i.next();
             try {
                 u.giveServerNotify().ServerAlert(l);
