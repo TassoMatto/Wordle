@@ -3,6 +3,7 @@ import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -33,6 +34,7 @@ public class Utente implements Serializable, Comparable<Utente> {
     private int successGameRow;                             // Ultima fila di risultati utili consecutivi
     private int bestSuccessGameRow;                         // Migliore file di risultati utili consecutivi
     private LinkedList<ArrayList<String>> attemptString;    // Lista di tutti i tentativi per ogni partita giocata
+    private LinkedList<String> wordPlayed;
     private int guessDistribution[];                        // Distribuzione dei tentativi impiegati per vincere i vari game
     @JsonIgnore
     private boolean playConcurrentGame;                     // Flag che indica se l'utente stava partecipando al gioco corrente o meno
@@ -80,6 +82,7 @@ public class Utente implements Serializable, Comparable<Utente> {
         this.playConcurrentGame = false;
         this.guessDistribution = new int[12];
         this.oldWord = "";
+        this.wordPlayed = new LinkedList<>();
         for (int i = 0; i < MAX_ATTEMPTS; i++) {
             this.guessDistribution[i] = 0;
         }
@@ -120,16 +123,24 @@ public class Utente implements Serializable, Comparable<Utente> {
 
     /**
      * 
+     * @throws IllegalAccessException
      * @fun                     addNewGamePlayed
      * @brief                   L'utente ha partecipato ad un nuovo gioco
      * 
      */
-    public void addNewGamePlayed() {
+    public int addNewGamePlayed(String wordPlay) {
+        if(this.wordPlayed == null || wordPlay == null) throw new NullPointerException();
+        boolean justPlayed = ((this.wordPlayed != null) && (this.wordPlayed.size() != 0)) ? (this.wordPlayed.getLast().equals(wordPlay)) : false;        
+        System.out.println(justPlayed);
         this.playConcurrentGame = true;
-        this.gamePlayed++;
-        this.attemptString.add(new ArrayList<>());
-        if((this.gamesWon.size() == 0) || (!this.gamesWon.getLast())) this.successGameRow = 0;
-        this.gamesWon.add(false);
+        if((this.wordPlayed.size() != 0) && justPlayed && (this.gamesWon.getLast())) return 2;
+        if(!justPlayed) this.gamePlayed++;
+        if(!justPlayed) this.attemptString.add(new ArrayList<>());
+        if((!justPlayed) && ((this.gamesWon.size() == 0) || (!this.gamesWon.getLast()))) this.successGameRow = 0;
+        if(!justPlayed) this.gamesWon.add(false);
+        if(!justPlayed) this.wordPlayed.add(wordPlay);
+
+        return (justPlayed) ? 3 : 0;
     }
 
     /**
@@ -225,6 +236,10 @@ public class Utente implements Serializable, Comparable<Utente> {
         return this.playConcurrentGame;
     }
 
+    public void logout() {
+        this.playConcurrentGame = false;
+    }
+
     /**
      * 
      * @fun                 alertEndGame
@@ -246,7 +261,11 @@ public class Utente implements Serializable, Comparable<Utente> {
      * 
      */
     public boolean winLastGame() {
-        return (this.gamesWon != null) ? this.gamesWon.getLast().booleanValue() : false;
+        try {
+            return (this.gamesWon != null) ? this.gamesWon.getLast().booleanValue() : false;
+        } catch (NoSuchElementException nsee) {
+            return false;
+        }
     }
 
     /**

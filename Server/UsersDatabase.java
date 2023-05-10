@@ -93,7 +93,6 @@ public class UsersDatabase {
         this.log.info(Thread.currentThread().getName() + " Notifico aggiornamento classifica agli utenti\n");
         i = online.values().iterator();
         while (i.hasNext()) {
-            System.out.println("AAAAAAAAAAAAAAAAAAAAAAAAAa");
             Utente u = i.next();
             try {
                 u.giveServerNotify().ServerAlert(l);
@@ -248,9 +247,8 @@ public class UsersDatabase {
                 this.classifica.add(utente);
             }
             this.totalWords = ud.giveTotalWord();
-            System.out.println("LE PAROLE: "+this.totalWords);
+            System.out.println("LE PAROLE: " + this.totalWords);
         } else {
-            System.out.println("CHE PALLE");
             this.totalWords = 0;
         }
        
@@ -320,7 +318,7 @@ public class UsersDatabase {
             while (i.hasNext()) {
                 Utente u = i.next();
                 try {       
-                    if(!u.winLastGame() && u.isPlaying()) u.resetGamePlayed(translated);
+                    if(u.isPlaying() && !u.winLastGame()) u.resetGamePlayed(translated);
                     else u.resetGamePlayed("");
                 } catch (RemoteException e) {
                     e.printStackTrace();
@@ -423,6 +421,7 @@ public class UsersDatabase {
             Utente u = this.online.get(username);
             if(u == null) return;
             if(!u.checkUserPsw(password)) return;
+            u.logout();
             this.online.remove(username);
         }
     }
@@ -465,6 +464,8 @@ public class UsersDatabase {
      * @return                              (0) In caso di successo
      *                                      (1) Utente non è online
      *                                      (2) Utente ha vinto il gioco corrente
+     *                                      (3) Se l'utente ha finito i tentativi
+     *                                      ()
      * 
      */
     public int playGame(String username, String password) {
@@ -477,14 +478,22 @@ public class UsersDatabase {
             Utente u;
             if((u = this.online.get(username)) == null) return 1;
             if(u.isPlaying() && u.winLastGame()) return 2;
-            if(u.isPlaying()) return 0;
+            if(u.isPlaying()) return 3;
             
-            u.addNewGamePlayed();
+            int res;
+            try {
+                res = u.addNewGamePlayed(secretWord);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return 1;
+            }
             this.backup.updateUsers(this);
             updatePlaces();
+
+            return res;
         }
         
-        return 0;
+        
     }
 
     public String sendGuessedWord(String username, String password, String gw) {
@@ -494,10 +503,11 @@ public class UsersDatabase {
         synchronized(database) {
             
             if((online.get(username) == null) || (!online.get(username).checkUserPsw(password))) return null;
-            if(!(online.get(username).alertEndGame()).equals("")) return "timeout_" + translated;
+            String wt = online.get(username).alertEndGame();
+            if(!wt.equals("")) return "timeout_" + wt;
             if(!online.get(username).isPlaying()) return "notAllow";
             if(online.get(username).winLastGame()) return "justWin";
-            if(online.get(username).numAttempts() == 12) return "maxAtt";
+            if(online.get(username).numAttempts() == 12) return "maxAtt_" + translated;
 
             String save = secretWord;
             if(!words.contains(gw)) return "notFound";

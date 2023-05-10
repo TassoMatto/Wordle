@@ -3,6 +3,7 @@ package Server;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -37,7 +38,6 @@ public class ClientRequest implements Runnable {
         ArrayList<String> att = this.us.giveUserAttempt(usernameC, passwordC);
         StringBuilder sb = new StringBuilder();
         if(att == null) {
-            System.out.println("MALEEEEEEE");
             return;
         }
 
@@ -48,9 +48,9 @@ public class ClientRequest implements Runnable {
         }
         try (DatagramSocket ds = new DatagramSocket()) {
             InetAddress ia = InetAddress.getByName(this.ipSocialNetwork);
-            System.out.println("MANDOOOOOOOOOOOOO");
             DatagramPacket dp = new DatagramPacket(sb.toString().getBytes(), sb.toString().getBytes().length, ia, this.portSocialNetwork);
             ds.send(dp);
+            this.log.info(Thread.currentThread().getName() + " " + "Invio suggerimenti a " + this.usernameC);
         } catch (Exception e) {
             e.printStackTrace();
             return;
@@ -58,23 +58,16 @@ public class ClientRequest implements Runnable {
 
     }
     
-    private void getLoginCred(DataInputStream dis) {
+    private void getLoginCred(DataInputStream dis) throws IOException {
 
         int dim;
         byte[] msg;
-
-        try {
-            dim = dis.readInt();
-            msg = dis.readNBytes(dim);
-            this.usernameC = new String(msg, 0, dim);
-            dim = dis.readInt();
-            msg = dis.readNBytes(dim);
-            this.passwordC = new String(msg, 0, dim);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-
+        dim = dis.readInt();
+        msg = dis.readNBytes(dim);
+        this.usernameC = new String(msg, 0, dim);
+        dim = dis.readInt();
+        msg = dis.readNBytes(dim);
+        this.passwordC = new String(msg, 0, dim);
     }
 
     @Override
@@ -109,7 +102,8 @@ public class ClientRequest implements Runnable {
                                 this.log.fine(Thread.currentThread().getName() + " Utente " + this.usernameC + " Ora sta partecipando al gioco\n");  
                             break;
                         
-                            case 1:
+                            case 2:
+                            case 3:
                                 this.log.info(Thread.currentThread().getName() + " Utente " + this.usernameC + " già partecipe del gioco\n");
                             break;
 

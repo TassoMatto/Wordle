@@ -35,6 +35,8 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
 
     /** Variabili globali */
     public static final String END_GAME_MSG = "timeoutGameover";
+    private static final long serialVersionUID = 1L;
+
 
     /** Attributi oggetto */
     private String serverIP;
@@ -131,13 +133,13 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
             int res;
             boolean play = false;
             while (true) {
-                //System.out.print("\033[H\033[2J");  
-                System.out.flush();
+                System.out.println("\n\n");
                 System.out.println("1) Partecipa al gioco");
                 if(play) System.out.println("2) Invia una parola da indovinare");
                 System.out.println("3) Mostra notifiche del server di gioco");
                 System.out.println("4) Mostrami prime 3 posizioni della classifica");
                 System.out.println("5) Logout dal server");
+                System.out.println(" >> ");
                 int opt = Integer.parseInt(inputKB.readLine());
 
                 /** Richieste */
@@ -166,6 +168,8 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                                     play = true;
 
                             }
+                        } else {
+                            System.out.println("<< Stai già partecipando al gioco >>");
                         }
                         
                     break;
@@ -175,7 +179,7 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                         if(play) {  // Solo se ho partecipato al gioco posso inviare una parola al server
 
                             Utils.sendMessage(dos, "gw");
-                            //System.out.print("\033[H\033[2J");  
+                            System.out.print("\033[H\033[2J");  
                             System.out.flush();
                             System.out.print("<< Inserisci una parola di 10 lettere >> -->> ");
                             String gw = inputKB.readLine();
@@ -192,19 +196,6 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                                     System.out.println("<< Tentativo non valido >>\n");
                                 break;
 
-                                /** Caso in cui ho fatto troppi tentativi */
-                                case "maxAtt":
-                                    System.out.println("<< Numero di tentativi massimo raggiunti >>");
-                                    System.out.println("<< Vuoi condividere i suggerimenti sul social? >>");
-                                    System.out.print("->> ");
-                                    share = Integer.parseInt(inputKB.readLine());
-                                    if(share == 1) {
-                                        Utils.sendMessage(dos, "share");
-                                        if(dis.readInt() == 0) System.out.println("Suggerimenti pubblicati");
-                                        else System.out.println("Impossibile pubblicare i suggerimenti");
-                                    }
-                                break;
-                                
                                 /** Utente non ha partecipato al gioco */
                                 case "notAllow":
                                     System.out.println("<< Prima di inviare una parola devi richiedere di partecipare al gioco >>");
@@ -220,9 +211,22 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                                     System.out.println("<< La parola non è presente nel gioco>>");
                                 break;
 
-                                /** Caso dove l'utente ha vinto il gioco oppure è scaduto il tempo */
                                 default:
-                                    if(!tips.contains("+") && !tips.contains("?") && !tips.contains("X")) {
+
+                                    /** Caso in cui ho fatto troppi tentativi */
+                                    if(tips.contains("maxAtt")) {
+                                        play = false;
+                                        System.out.println("<< Numero di tentativi massimo raggiunti >>");
+                                        System.out.println("<< Vuoi condividere i suggerimenti sul social? >>");
+                                        System.out.print("->> ");
+                                        share = Integer.parseInt(inputKB.readLine());
+                                        if(share == 1) {
+                                            Utils.sendMessage(dos, "share");
+                                            if(dis.readInt() == 0) System.out.println("Suggerimenti pubblicati");
+                                            else System.out.println("Impossibile pubblicare i suggerimenti");
+                                        }
+                                    } else if(!tips.contains("+") && !tips.contains("?") && !tips.contains("X")) {
+                                        /** Caso dove l'utente ha vinto il gioco oppure è scaduto il tempo */
                                         if(tips.contains("win_")) {
                                             play = false;
                                             System.out.println("Complimenti - Hai indovinato la parola segreta!");
@@ -242,6 +246,7 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
                                             Utils.sendMessage(dos, "statistics");
                                             String statistics = Utils.receiveMessage(dis);
                                             System.out.println("\n" + statistics);
+                                            play = false;
                                         }
                                     } else System.out.println("<< SUGGERIMENTO: " + tips + " >>");
                             }
@@ -350,6 +355,8 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
             ai = (AuthenticationInterface) r.lookup("//localhost/WordleServer");
             
             /** Chiedo all'utente se vuole registrarsi o no */
+            System.out.print("\033[H\033[2J");  
+            System.out.flush();
             System.out.println("\t\t\t<< WORDLE >>");
             System.out.println("<< Desideri registrarti al server di gioco? >>");
             System.out.println("<< (1) Registrazione - (0) Login >>");
@@ -360,6 +367,8 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
             while(opt == 1) {
                 
                 /** Registro l'utente sul server */
+                System.out.print("\033[H\033[2J");  
+                System.out.flush();
                 System.out.println("\n\n< Inserire credenziali per la registrazione >\n");
                 System.out.print("< Username > ->> ");
                 String username = inputKB.readLine();
@@ -404,19 +413,10 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
 
         /** Aggiorno la classifica locale dell'utente */
         if(update.size() == 0) {
-            System.out.println("Malissimo");
             return;
         }
-        System.out.println("Dimensioneeeee: " + update.size());
-        System.out.println("Dimensioneeeee: " + update.size());
 
         synchronized(this.podium) {
-            for (String string : update) {
-               System.err.println(string);
-            }
-            for (String string : podium) {
-                System.err.println(string);
-            }
             this.podium = new LinkedList<>();
             while (!update.isEmpty()) {
                 this.podium.add(update.poll());
@@ -437,7 +437,6 @@ public class WordleClient implements Runnable, ServerNotify, Serializable {
 
         /** Aggiungo la notifiche del social network */
         synchronized(this.serverNotice) {
-            System.out.println("SPERO FUNZIONI");
             this.serverNotice.add(notice);
         }
     }

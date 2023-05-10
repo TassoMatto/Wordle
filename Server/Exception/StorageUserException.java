@@ -12,6 +12,8 @@ package Server.Exception;
 
 public class StorageUserException extends Exception {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * 
      * @fun             StoragerUserException

@@ -49,10 +49,10 @@ public class SocialNetworkNotify implements Runnable {
         /** Cerco un'interfaccia disponibile  */
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while (interfaces.hasMoreElements()) {
-            NetworkInterface i = (NetworkInterface) interfaces.nextElement();
+            NetworkInterface i = interfaces.nextElement();
             Enumeration<InetAddress> addresses = i.getInetAddresses();
             while (addresses.hasMoreElements()) {
-                InetAddress address = (InetAddress) addresses.nextElement();
+                InetAddress address = addresses.nextElement();
                 if (address instanceof Inet4Address) {
                     multicastSocket.setNetworkInterface(i);
                     return i;
@@ -80,16 +80,12 @@ public class SocialNetworkNotify implements Runnable {
             isa = new InetSocketAddress(InetAddress.getByName(ip), port);
             ms = new MulticastSocket(port);
             ni = setInterface(ms);
-            if(ni == null) System.err.println("Aia");
-            else System.out.println("AAAAAAAAAAAAAAAAAAAAAAAA");
             ms.joinGroup(isa, ni);
 
             /** Resto in attesa di nuovi messaggi dal server */
             while (!Thread.currentThread().isInterrupted()) {
                 DatagramPacket dp = new DatagramPacket(buf, buf.length);
-                ms.receive(dp);                
-                System.out.println("RICEVUTO");
-                System.out.flush();
+                ms.receive(dp);      
                 String msg = new String(dp.getData(), 0, dp.getLength());
                 this.wc.addNotify(msg);
             }    

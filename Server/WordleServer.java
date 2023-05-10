@@ -110,10 +110,10 @@ public class WordleServer implements Runnable {
      * @throws FileNotFoundException
      * 
      */
-    public WordleServer(String configFile, String backupFile) throws FileNotFoundException {
+    public WordleServer(String configFile, String backupFile, String words) throws FileNotFoundException {
 
         /** Controllo argomenti */
-        if(configFile.equals("") || backupFile.equals("")) throw new IllegalArgumentException();
+        if(configFile.equals("") || backupFile.equals("") || words.equals("")) throw new IllegalArgumentException();
 
         /** Settaggio parametri server */
         String save;
@@ -141,7 +141,7 @@ public class WordleServer implements Runnable {
         }
 
         /** Costruisco il Database */
-        users = new UsersDatabase(backupFile, "words.txt", timegame, log);
+        users = new UsersDatabase(backupFile, words, timegame, log);
 
     }
 

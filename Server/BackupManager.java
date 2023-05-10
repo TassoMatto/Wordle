@@ -95,7 +95,6 @@ public class BackupManager {
         if(ud == null) throw new IllegalArgumentException();
 
         /** Aggiorno il contenuto del file json */
-        System.out.println("SALVATAGGIO!!!!");
         File fileJson = new File(this.JsonFilePath);   
         if(fileJson.exists()) fileJson.delete();
         try {
